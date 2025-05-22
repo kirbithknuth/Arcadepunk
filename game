@@ -1,0 +1,132 @@
+import pygame
+import random
+import sys
+
+# Initialize Pygame
+pygame.init()
+
+# Constants
+WIDTH, HEIGHT = 800, 600
+FPS = 60
+FONT = pygame.font.SysFont("Arial", 24)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (200, 0, 0)
+GREEN = (0, 200, 0)
+
+# Game screen
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Punk Beer Quest")
+clock = pygame.time.Clock()
+
+# Assets (placeholder)
+punk_img = pygame.Surface((50, 50))
+punk_img.fill(RED)
+npc_img = pygame.Surface((40, 40))
+npc_img.fill(GREEN)
+bin_img = pygame.Surface((30, 30))
+bin_img.fill((100, 100, 100))
+
+# Game objects
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = punk_img
+        self.rect = self.image.get_rect()
+        self.rect.x = WIDTH // 2
+        self.rect.y = HEIGHT - 60
+        self.coins = 0
+        self.beers = 0
+        self.beer_price = 1
+
+    def update(self, keys):
+        if keys[pygame.K_LEFT]: self.rect.x -= 5
+        if keys[pygame.K_RIGHT]: self.rect.x += 5
+        if keys[pygame.K_UP]: self.rect.y -= 5
+        if keys[pygame.K_DOWN]: self.rect.y += 5
+
+    def buy_beer(self):
+        if self.coins >= self.beer_price:
+            self.coins -= self.beer_price
+            self.beers += 1
+            self.beer_price += 2
+
+class NPC(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = npc_img
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(0, WIDTH - 40)
+        self.rect.y = random.randint(0, HEIGHT - 100)
+        self.coins = random.randint(5, 50)
+
+class Bin(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = bin_img
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(0, WIDTH - 30)
+        self.rect.y = random.randint(0, HEIGHT - 100)
+
+player = Player()
+all_sprites = pygame.sprite.Group()
+npcs = pygame.sprite.Group()
+bins = pygame.sprite.Group()
+
+all_sprites.add(player)
+for _ in range(5):
+    npc = NPC()
+    npcs.add(npc)
+    all_sprites.add(npc)
+
+for _ in range(3):
+    b = Bin()
+    bins.add(b)
+    all_sprites.add(b)
+
+# Game loop
+running = True
+while running:
+    clock.tick(FPS)
+    keys = pygame.key.get_pressed()
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                # Interact with NPCs
+                for npc in npcs:
+                    if player.rect.colliderect(npc.rect):
+                        if random.random() < 0.5:
+                            player.coins += npc.coins
+                            npc.kill()
+            if event.key == pygame.K_b:
+                player.buy_beer()
+
+    # Check for bins
+    for b in bins:
+        if player.rect.colliderect(b.rect):
+            player.coins += 1
+            b.kill()
+
+    player.update(keys)
+
+    screen.fill(BLACK)
+    all_sprites.draw(screen)
+
+    # Draw UI
+    screen.blit(FONT.render(f"Coins: {player.coins}", True, WHITE), (10, 10))
+    screen.blit(FONT.render(f"Beers: {player.beers}", True, WHITE), (10, 40))
+    screen.blit(FONT.render(f"Next Beer Price: {player.beer_price}", True, WHITE), (10, 70))
+
+    if player.beers >= 1000:
+        screen.blit(FONT.render("YOU WIN!", True, GREEN), (WIDTH // 2 - 50, HEIGHT // 2))
+        pygame.display.flip()
+        pygame.time.wait(3000)
+        break
+
+    pygame.display.flip()
+
+pygame.quit()
+sys.exit()
